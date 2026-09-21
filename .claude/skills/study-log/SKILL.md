@@ -55,16 +55,18 @@ lack the key points, ask 1-2 light questions — don't over-interrogate.
 
 **Draft the issue** using this template (all English, keep it tight):
 
-Title — a short noun phrase of the topic, ≤ ~70 chars. Examples:
-- `Bash variables & parameter expansion`
-- `Command substitution: $(...) vs backticks`
-- `Single vs double quoting in Bash`
+Title — `<N>.<short title>` where **N is the issue's own sequential number** so issues
+sort in study order and are easy to find. Compute N = (highest existing issue number) + 1
+— check with `gh issue list --state all`. The short title is a concise English noun phrase
+of the topic, ≤ ~70 chars. Real examples:
+- `1.Shell scripting basics: naming, permissions, variables, builtins`
+- `2.Special variables, conditionals & the if statement`
 
 Body:
 
 ```markdown
 ## Lesson
-<1–2 lines: what this video/section covers>
+<Verbatim course lesson title, exactly as in the course, keeping its trailing period> (S<section>-L<lesson>)
 
 ## Key points
 - <one idea per bullet — short, clear phrase>
@@ -72,10 +74,16 @@ Body:
 - <list every subtopic the lesson covered; no long descriptions>
 ```
 
+The **`## Lesson` line is the course lesson title copied verbatim**, followed by a
+`(S<section>-L<lesson>)` tag — `S` = section number, `L` = the course's lesson number
+(e.g. Section 3, lesson 13 → `(S3-L13)`). Do NOT paraphrase it. If the section/lesson
+number isn't obvious from what the user gives, ask them briefly.
+
 Keep the issue **minimal: only `## Lesson` + `## Key points`**. Do NOT add `## Practice`,
-`## Deliverables`, or checklists (the user removed those). **Key points: one idea per
-bullet** — each a short, clear phrase; do NOT merge several ideas onto one line and do NOT
-write long descriptions. List every distinct subtopic the lesson covered, in lesson order.
+`## Deliverables`, or checklists. **Key points: one idea per bullet** — each a short, clear
+phrase; do NOT merge several ideas onto one line, do NOT write long descriptions, and do
+NOT invent subtopics the user didn't actually learn (only what the lesson/their notes and
+their scripts show). List every distinct subtopic the lesson covered, in lesson order.
 
 **Confirm, then create.** After the user approves, write the body to a temp file and run:
 
