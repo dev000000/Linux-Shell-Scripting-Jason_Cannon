@@ -55,10 +55,12 @@ lack the key points, ask 1-2 light questions — don't over-interrogate.
 
 **Draft the issue** using this template (all English, keep it tight):
 
-Title — `<N>.<short title>` where **N is the issue's own sequential number** so issues
-sort in study order and are easy to find. Compute N = (highest existing issue number) + 1
-— check with `gh issue list --state all`. The short title is a concise English noun phrase
-of the topic, ≤ ~70 chars. Real examples:
+Title — `<N>.<short title>` where **N is the issue's own number** so issues sort in study
+order and are easy to find. GitHub assigns the number only at creation and shares it with
+PRs, so it can skip — do NOT trust a remembered value. Safe flow: create the issue, read
+the real number from the returned URL, and if the title prefix doesn't match, fix it with
+`gh issue edit <N> --title "<N>.<short title>"`. The short title is a concise English noun
+phrase of the topic, ≤ ~70 chars. Real examples:
 - `1.Shell scripting basics: naming, permissions, variables, builtins`
 - `2.Special variables, conditionals & the if statement`
 
