@@ -1,28 +1,21 @@
 #!/bin/bash
-# This script disables, deletes, and optionally archives a local user account. (Script for documents/Exercise-05-Deleting-Local-Users-04.pdf)
+# This script disables, deletes, and/or archives users on the local system. (Script for documents/Exercise-05-Deleting-Local-Users-04.pdf)
 
-# usage function: show usage information for user.
+readonly ARCHIVE_DIR='/archives'
+
+EXIT_STATUS=0
+
+# Display the usage and exit.
 usage() {
-  echo "Usage: ${0} [options] [USERNAME...]" >&2
-  echo " ${0} - disables (by default), deletes, optionally archives a local user account " >&2
+  echo "Usage: ${0} [-dra] USERNAME [USERNAME...]" >&2
+  echo "Disable a local Linux account." >&2
   echo "Option:" >&2
-  echo " -d, --delete   Deletes accounts instead of disabling them." >&2
-  echo " -r, --remove   Removes the home directory associated with the account(s)." >&2
-  echo " -a, --archive  Creates an archive of the home directory associated with the accounts(s) and stores the archive in the /archives directory. " >&2
-  echo " -D, --disable  (expires/locks) accounts (default)" >&2
+  echo " -d   Deletes accounts instead of disabling them." >&2
+  echo " -r   Removes the home directory associated with the account(s)." >&2
+  echo " -a  Creates an archive of the home directory associated with the accounts(s) and stores the archive in the /archives directory. " >&2
   exit 1
  }
-  
-# Check recent command is success or not 
-check() {
-  
-  if [[ "${?}" -ne 0 ]]
-  then
-    local MESSAGE="${1}"
-    echo "${MESSAGE}" >&2
-    exit 1
-  fi
-}
+
 # Make sure the script is being executed with superuser privileges.
 if [[ "${UID}" -ne 0 ]]
 then
@@ -30,77 +23,103 @@ then
   exit 1
 fi
 
-
+# Parse the options.
 while getopts dra OPTION
 do
   case ${OPTION} in
     d) DELETE_USER='true' ;;
-    r) REMOVE_HOME_DIRECTORY='true' ;;
-    a) ARCHIVE_HOME_DIRECTORY='true' ;;
+    r) REMOVE_OPTION='-r' ;;
+    a) ARCHIVE='true' ;;
     ?) usage ;;
   esac
 done
 
+# Remove the options while leaving the remaining arguments.
 shift "$(( OPTIND - 1 ))"
 
-# At least one username is required
+# if the user doesn't supply at least one argument, give them help.
 if [[ "${#}" -lt 1 ]]
 then 
   usage
-  exit 1
 fi
 
-# 
+# Loop through all the usernames supplied as arguments.
 while [[ "${#}" -gt 0 ]]
 do
-  ACTION=''
   USER_NAME="${1}"
   shift 1
-  # check user is system account or not 
-  if [[ $( id -u ${USER_NAME} ) -lt 1000 ]]
+  echo "Processing user: ${USER_NAME}"
+  # Make sure the UID of the account is at least 1000.
+  USERID=$(id -u ${USER_NAME})
+  if [[ "${USERID}" -lt 1000 ]]
   then
-    echo "You can not working with system account: ${USER_NAME}" >&2
+    echo "Refusing to remove the ${USER_NAME} account with UID ${USERID}." >&2
+    EXIT_STATUS=1
     continue
   else
-    # check user want to archive home directory
-    if [[ "${ARCHIVE_HOME_DIRECTORY}" = "true" ]]
+    # Create an archive if requested to do so.
+    if [[ "${ARCHIVE}" = "true" ]]
     then
-      # Append action archive to the ACTION variable.
-      ACTION+="Archiving home directory"
-      # check /archives existed or not 
-      if [[ ! -d "/archives" ]]
+      # Make sure ARCHIVE_DIR directory exists.
+      if [[ ! -d "${ARCHIVE_DIR}" ]]
       then
-        mkdir '/archives'
+        echo "Creating ${ARCHIVE_DIR} directory."
+        mkdir -p "${ARCHIVE_DIR}"
+        if [[ "${?}" -ne 0 ]]
+        then
+          echo "The archive directory ${ARCHIVE_DIR} could not be created." >&2
+          EXIT_STATUS=1
+          continue
+        fi
       fi
-      # archive home directory
-      tar -zcf "/archives/home_directory_${USER_NAME}.tar.gz" "/home/${USER_NAME}"
-      check "Archive home directory not successfully"
+      # Archive the user's home directory and move it into the ARCHIVE_DIR.
+      HOME_DIR="/home/${USER_NAME}"
+      ARCHIVE_FILE="${ARCHIVE_DIR}/${USER_NAME}.tgz"
+      if [[ -d "${HOME_DIR}" ]]
+      then
+        echo "Archiving ${HOME_DIR} to ${ARCHIVE_FILE}"
+        tar -zcf "${ARCHIVE_FILE}" "${HOME_DIR}" &> /dev/null
+        if [[ "${?}" -ne 0 ]]
+        then
+          echo "Could not create ${ARCHIVE_FILE}." >&2
+          EXIT_STATUS=1
+          continue
+        fi
+      else
+        echo "${HOME_DIR} does not exist or is not a directory." >&2
+        EXIT_STATUS=1
+        continue
+      fi
     fi
-    
-    # check user want to delete or disable 
+
     if [[ "${DELETE_USER}" = "true" ]]
     then
-      # Append action delete to the ACTION variable.
-      ACTION+=",Deleting user"
-      # check user want to remove home directory or not
-      if [[ "${REMOVE_HOME_DIRECTORY}" = "true" ]]
+      # Delete the user
+      userdel ${REMOVE_OPTION} ${USER_NAME}
+
+      # Check to see if the userdel command succeeded.
+      # We don't want to tell the user that an account was deleted when it hasn't been.
+      if [[ "${?}" -ne 0 ]]
       then
-        # Append action remove to the ACTION variable.
-        ACTION+=",Removing home directory"
-        userdel -r "${USER_NAME}"
-      else
-        userdel "${USER_NAME}"
+        echo "The account ${USER_NAME} was NOT deleted." >&2
+        EXIT_STATUS=1
+        continue
       fi
-      check 'Remove user not successfully'
+      echo "The account ${USER_NAME} was deleted."
     else
-      # if not delete => disable ( default )
-      # Append action disable to the ACTION variable.
-      ACTION+=",Disabling user"
       chage -E 0 "${USER_NAME}"
-      check 'Disable user not successfully'
+
+      # Check to see if the chage command succeeded.
+      # We don't want to tell the user that an account was disabled when it hasn't been.
+      if [[ "${?}" -ne 0 ]]
+      then
+        echo "The account ${USER_NAME} was NOT disabled." >&2
+        EXIT_STATUS=1
+        continue
+      fi
+      echo "The account ${USER_NAME} was disabled."
     fi
-    echo "Successfully ${ACTION} for user: ${USER_NAME}"
   fi
 done
 
-exit 0
+exit ${EXIT_STATUS}
