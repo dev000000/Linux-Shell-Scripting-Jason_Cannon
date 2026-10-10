@@ -2,6 +2,8 @@
 
 # This script learn about cut and awk command in bash
 
+# Part1:
+
 # 1. Learn about cut command
 # The cut command is used to cutting out sections from each line of input it receives and display those sections to standard output.
 # You can use cut command to extract pieces of a line by byte position, character position or by a delimiter.
@@ -437,3 +439,182 @@ awk '{print $1, $2}' lines
 # When you should use awk instead of cut command:
 # 1. When you need to use a multi-character delimiter.
 # 2. When you handle fields separated by whitespace.
+
+# Part2:
+# Goal: List the port number that are open on our local system without any extra data around it.
+
+# First, Learn about netstat command
+# The netstat command is used to display network connections, routing tables, interface statistics, masquerade connections, and multicast memberships. It is a useful tool for network troubleshooting and performance measurement.
+# Syntax: netstat [OPTION]...
+# Options:
+# -n, --numeric Show numerical addresses instead of trying to determine symbolic host, port or user names.
+# -u, --udp Show UDP connections.
+# -t, --tcp Show TCP connections.
+# -l, --listening Show only listening sockets.
+
+# Demonstration of netstat command
+echo "Demonstration of netstat command"
+netstat -nutl
+# Output:
+# Active Internet connections (only servers)
+# Proto Recv-Q Send-Q Local Address           Foreign Address         State
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN
+# tcp6       0      0 :::22                   :::*                    LISTEN
+# tcp6       0      0 ::1:25                  :::*                    LISTEN
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*
+# udp        0      0 127.0.0.1:323           0.0.0.0:*
+# udp        0      0 0.0.0.0:68              0.0.0.0:*
+# udp6       0      0 :::47728                :::*
+# udp6       0      0 ::1:323                 :::*
+
+# You want to eliminate the header of the above output, you have several options to do that.
+
+# Option 1. grep -v twice
+echo "Option 1. grep -v twice"
+netstat -nutl | grep -v '^Active' | grep -v '^Proto'
+# Output:
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN
+# tcp6       0      0 :::22                   :::*                    LISTEN
+# tcp6       0      0 ::1:25                  :::*                    LISTEN
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*
+# udp        0      0 127.0.0.1:323           0.0.0.0:*
+# udp        0      0 0.0.0.0:68              0.0.0.0:*
+# udp6       0      0 :::47728                :::*
+# udp6       0      0 ::1:323                 :::*
+
+# Option 2. use extended regular expression (ERE) with grep command (grep -E )
+echo "Option 2. use extended regular expression (ERE) with grep command (grep -E )"
+netstat -nutl | grep -Ev '^Proto|^Active'
+# | (pipe) in the regular expression means "or", so the above command will match any line that starts with "Proto" or "Active".
+
+# Output:
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN
+# tcp6       0      0 :::22                   :::*                    LISTEN
+# tcp6       0      0 ::1:25                  :::*                    LISTEN
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*
+# udp        0      0 127.0.0.1:323           0.0.0.0:*
+# udp        0      0 0.0.0.0:68              0.0.0.0:*
+# udp6       0      0 :::47728                :::*
+# udp6       0      0 ::1:323                 :::*
+
+# Option 3. keep what the data has in common, every one of them contains a colon (:) in the line, while the two header lines do not.
+echo "Option 3. keep what the data has in common, every one of them contains a colon (:) in the line, while the two header lines do not."
+netstat -nutl | grep ':'
+# Output:
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN
+# tcp6       0      0 :::22                   :::*                    LISTEN
+# tcp6       0      0 ::1:25                  :::*                    LISTEN
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*
+# udp        0      0 127.0.0.1:323           0.0.0.0:*
+# udp        0      0 0.0.0.0:68              0.0.0.0:*
+# udp6       0      0 :::47728                :::*
+# udp6       0      0 ::1:323                 :::*
+
+# At first thought, you may be thinking we can just split this on a colon and print the second field.
+echo "At first thought, you may be thinking we can just split this on a colon and print the second field."
+netstat -nutl | grep ':' | cut -d ':' -f 2
+# Output:
+# 22              0.0.0.0
+# 25            0.0.0.0
+
+
+# 10744           0.0.0.0
+# 323           0.0.0.0
+# 68              0.0.0.0
+#
+#
+
+# You can see that the output is not what we want, because in case of IPv6, the address contains a colon, so we when we extract the second field, we get the <null> between the first and second colon, which is not what we want. So we need to use a different approach to extract the port number.
+# when cut command excute in one line, if not match you will get a blank line, this is reason why we get the blank lines in the output above.
+
+# If you see the input data has lines that separated by random whitespace, so you can think about using awk command
+echo "If you see the input data has lines that separated by random whitespace, so you can think about using awk command"
+netstat -nutl | grep ':' | awk '{print $4}'
+# Output:
+# 0.0.0.0:22
+# 127.0.0.1:25
+# :::22
+# ::1:25
+# 0.0.0.0:10744
+# 127.0.0.1:323
+# 0.0.0.0:68
+# :::47728
+# ::1:323
+
+# And you can see that what data we want is the last part of each line, which is the port number. So we can use awk command to split the line by colon and print the last field.
+echo "And you can see that what data we want is the last part of each line, which is the port number. So we can use awk command to split the line by colon and print the last field."
+netstat -nutl | grep ':' | awk '{print $4}' | awk -F ":" '{print $NF}'
+# Output:
+# 22
+# 25
+# 22
+# 25
+# 10744
+# 323
+# 68
+# 47728
+# 323
+
+# Bonus: If you want to only print v4 addresses, you can use the -4 option of netstat command to only print v4 addresses.
+echo "If you want to only print v4 addresses, you can use the -4 option of netstat command to only print v4 addresses."
+netstat -4nutl 
+# Output:
+# Active Internet connections (only servers)
+# Proto Recv-Q Send-Q Local Address           Foreign Address         State
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*
+# udp        0      0 127.0.0.1:323           0.0.0.0:*
+# udp        0      0 0.0.0.0:68              0.0.0.0:*
+
+# print the port number of each line in the output of netstat command with -4 option
+echo "print the port number of each line in the output of netstat command with -4 option"
+netstat -4nutl | grep ':' | awk '{print $4}' | awk -F ":" '{print $2}'
+# Output:
+# 22
+# 25
+# 10744
+# 323
+# 68
+
+# print the port number of each line in the output of netstat command with -4 option, and use $NF to print the last field of each line
+netstat -4nutl | grep ':' | awk '{print $4}' | awk -F ":" '{print $NF}'
+# Output:
+# 22
+# 25
+# 10744
+# 323
+# 68
+
+# In case you only print v4 addresses, Local Address field will always have 2 fields, so you can use $2 to print the port number of each line. The $NF is more general, it will work for both v4 and v6 addresses, because it will always print the last field of each line, regardless of how many fields there are in each line.
+
+
+# Bonus: -p option of netstat command can display PID and the name of the program that has the port open. But to get that information, you need to run the command as superuser privileges.
+
+# Demonstration:
+# sudo netstat -nutlp
+# Output:
+# Active Internet connections (only servers)
+# Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      898/sshd
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN      1022/master
+# tcp6       0      0 :::22                   :::*                    LISTEN      898/sshd
+# tcp6       0      0 ::1:25                  :::*                    LISTEN      1022/master
+# udp        0      0 0.0.0.0:10744           0.0.0.0:*                           3111/dhclient
+# udp        0      0 127.0.0.1:323           0.0.0.0:*                           630/chronyd
+# udp        0      0 0.0.0.0:68              0.0.0.0:*                           3111/dhclient
+# udp6       0      0 :::47728                :::*                                3111/dhclient
+# udp6       0      0 ::1:323                 :::*                                630/chronyd
+
+# sudo netstat -nutlp | grep '22'
+# Output:
+# tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      898/sshd
+# tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN      1022/master
+# tcp6       0      0 :::22                   :::*                    LISTEN      898/sshd
+# tcp6       0      0 ::1:25                  :::*                    LISTEN      1022/master
+
+# => this shows is that we have SSHD with a pid of 898 listening on port 22.
